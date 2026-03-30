@@ -3,8 +3,6 @@ steps:
     image: google/cloud-sdk:slim
     environment:
       CLOUDSDK_CORE_DISABLE_PROMPTS: "1"
-      # Linux login for SSH (Ubuntu on GCE is usually `ubuntu`; Debian often `debian`). Empty uses gcloud default (often root — often rejected).
-      GCP_SSH_USER: ubuntu
       GCP_SA_KEY_JSON:
         from_secret: gcp_sa_key_json
       GCP_PROJECT_ID:
@@ -15,10 +13,8 @@ steps:
       - printf '%s' "$GCP_SA_KEY_JSON" > /tmp/gcp-sa-key.json
       - gcloud auth activate-service-account --key-file=/tmp/gcp-sa-key.json
       - gcloud config set project "$GCP_PROJECT_ID"
-      - |
-        SSH_TARGET="recipe-rotation"
-        if [ -n "${GCP_SSH_USER:-}" ]; then SSH_TARGET="${GCP_SSH_USER}@recipe-rotation"; fi
-        gcloud compute ssh "$SSH_TARGET" --zone us-central1-b --command "whoami && sudo -n true && echo preflight_ok"
+      # Explicit user@instance so gcloud does not default to root (often denied). Change ubuntu if your image uses another login.
+      - gcloud compute ssh ubuntu@recipe-rotation --zone us-central1-b --command "whoami && sudo -n true && echo preflight_ok"
 
   deploy-nginx:
     image: google/cloud-sdk:slim
@@ -26,7 +22,6 @@ steps:
       - preflight-gcp-auth
     environment:
       CLOUDSDK_CORE_DISABLE_PROMPTS: "1"
-      GCP_SSH_USER: ubuntu
       GCP_SA_KEY_JSON:
         from_secret: gcp_sa_key_json
       GCP_PROJECT_ID:
@@ -37,10 +32,7 @@ steps:
       - printf '%s' "$GCP_SA_KEY_JSON" > /tmp/gcp-sa-key.json
       - gcloud auth activate-service-account --key-file=/tmp/gcp-sa-key.json
       - gcloud config set project "$GCP_PROJECT_ID"
-      - |
-        SSH_TARGET="recipe-rotation"
-        if [ -n "${GCP_SSH_USER:-}" ]; then SSH_TARGET="${GCP_SSH_USER}@recipe-rotation"; fi
-        gcloud compute ssh "$SSH_TARGET" --zone us-central1-b --command "sudo apt-get update && sudo apt-get install -y nginx && sudo systemctl enable --now nginx"
+      - gcloud compute ssh ubuntu@recipe-rotation --zone us-central1-b --command "sudo apt-get update && sudo apt-get install -y nginx && sudo systemctl enable --now nginx"
 
   run-e2e-test:
     image: golang:1.22
