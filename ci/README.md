@@ -121,34 +121,22 @@ This pipeline is configured to run on:
 
 Do not commit cloud credentials to git. Add them as repository secrets in Woodpecker:
 
-1. Open your repo in Woodpecker -> `Settings` -> `Secrets`
-2. Add secret `gcp_adc_json` with the full JSON contents of:
-   `~/.config/gcloud/application_default_credentials.json`
-3. Add secret `gcp_project_id` with your GCP project ID
+1. In GCP: **IAM & Admin** → **Service accounts** → pick or create a service account → **Keys** → **Add key** → **JSON** (only if your org allows key creation).
+2. Open your repo in Woodpecker → **Settings** → **Secrets**.
+3. Add secret **`gcp_sa_key_json`**: paste the **entire** contents of that JSON key file (one secret value, multiline JSON is fine).
+4. Add secret **`gcp_project_id`**: your GCP **project ID** (not display name).
 
-The pipeline uses these secrets in a deploy step to install/start Nginx on your VM.
+The pipeline writes the JSON to a short-lived temp file, runs `gcloud auth activate-service-account`, sets the project, then uses `gcloud compute ssh` to reach the VM.
+
+Target VM:
 
 - instance: `recipe-rotation`
 - zone: `us-central1-b`
 - external IP: `34.60.141.247`
 
-Required IAM permissions depend on what credentials you use:
+**IAM (tune to your setup):** the service account needs enough access to resolve the instance and open SSH (often **Compute Instance Admin** plus OS Login / SSH-related roles, or equivalent custom roles). If `sudo -n` fails in preflight, grant passwordless sudo for that principal on the VM or use a different deploy method.
 
-- If using ADC from a logged-in user, ensure that user is allowed to:
-  - connect to the VM over SSH (OS Login / project-wide SSH permissions)
-  - start/stop/update instances as required (at minimum, the permissions needed to run your `--command`)
-
-If you tell me how you authenticated (ADC from user login vs different flow), I can suggest the least-privilege IAM roles.
-
-Note: Woodpecker pipeline containers cannot directly read `~/.config/...` from your workstation. You must provide that file contents via a Woodpecker secret (as above), or mount it into the agent container (advanced/less ideal).
-
-For user ADC (`gcloud auth application-default login`), this pipeline uses:
-
-1. `GOOGLE_APPLICATION_CREDENTIALS` -> ADC JSON file
-2. `gcloud auth application-default print-access-token`
-3. `gcloud --access-token-file=... compute ssh ...`
-
-This avoids interactive `gcloud auth login` in CI.
+Remove or rotate the key in GCP if it is ever exposed; prefer narrow roles and a dedicated deploy-only service account.
 
 ## 8) Lock down a public Woodpecker instance
 
@@ -190,7 +178,7 @@ The pipeline step runs:
 GO111MODULE=off go test ./test/e2e -v -run TestEndpointServesTraffic
 ```
 
-Because nothing is deployed at `34.60.141.247:80` yet, this test is currently expected to fail.
+After a successful deploy, Nginx should answer on port 80; if the VM or firewall is not ready, the e2e step may still fail until HTTP returns 2xx.
 
 ## Useful commands
 
