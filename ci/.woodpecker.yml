@@ -10,12 +10,11 @@ steps:
         from_secret: gcp_project_id
     commands:
       - umask 077
-      - trap 'rm -f /tmp/gcp-adc.json' EXIT
+      - trap 'rm -f /tmp/gcp-adc.json /tmp/gcp-access-token' EXIT
       - printf '%s' "$GCP_ADC_JSON" > /tmp/gcp-adc.json
       - export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-adc.json
-      - gcloud config set project "$GCP_PROJECT_ID"
-      - gcloud auth application-default print-access-token >/dev/null
-      - gcloud compute ssh recipe-rotation --zone us-central1-b --command "whoami && sudo -n true && echo preflight_ok"
+      - gcloud auth application-default print-access-token > /tmp/gcp-access-token
+      - gcloud --access-token-file=/tmp/gcp-access-token compute ssh recipe-rotation --project "$GCP_PROJECT_ID" --zone us-central1-b --command "whoami && sudo -n true && echo preflight_ok"
 
   deploy-nginx:
     image: google/cloud-sdk:slim
@@ -30,11 +29,11 @@ steps:
         from_secret: gcp_project_id
     commands:
       - umask 077
-      - trap 'rm -f /tmp/gcp-adc.json' EXIT
+      - trap 'rm -f /tmp/gcp-adc.json /tmp/gcp-access-token' EXIT
       - printf '%s' "$GCP_ADC_JSON" > /tmp/gcp-adc.json
       - export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-adc.json
-      - gcloud config set project "$GCP_PROJECT_ID"
-      - gcloud compute ssh recipe-rotation --zone us-central1-b --command "sudo apt-get update && sudo apt-get install -y nginx && sudo systemctl enable --now nginx"
+      - gcloud auth application-default print-access-token > /tmp/gcp-access-token
+      - gcloud --access-token-file=/tmp/gcp-access-token compute ssh recipe-rotation --project "$GCP_PROJECT_ID" --zone us-central1-b --command "sudo apt-get update && sudo apt-get install -y nginx && sudo systemctl enable --now nginx"
 
   run-e2e-test:
     image: golang:1.22

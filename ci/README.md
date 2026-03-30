@@ -142,6 +142,14 @@ If you tell me how you authenticated (ADC from user login vs different flow), I 
 
 Note: Woodpecker pipeline containers cannot directly read `~/.config/...` from your workstation. You must provide that file contents via a Woodpecker secret (as above), or mount it into the agent container (advanced/less ideal).
 
+For user ADC (`gcloud auth application-default login`), this pipeline uses:
+
+1. `GOOGLE_APPLICATION_CREDENTIALS` -> ADC JSON file
+2. `gcloud auth application-default print-access-token`
+3. `gcloud --access-token-file=... compute ssh ...`
+
+This avoids interactive `gcloud auth login` in CI.
+
 ## 8) Lock down a public Woodpecker instance
 
 If your Woodpecker URL is public, use these settings in `ci/.env`:
