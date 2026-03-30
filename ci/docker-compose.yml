@@ -1,0 +1,22 @@
+services:
+  woodpecker-server:
+    image: woodpeckerci/woodpecker-server:next
+    container_name: woodpecker-server
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./data/woodpecker:/var/lib/woodpecker
+
+  woodpecker-agent:
+    image: woodpeckerci/woodpecker-agent:next
+    container_name: woodpecker-agent
+    restart: unless-stopped
+    depends_on:
+      - woodpecker-server
+    env_file:
+      - .env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

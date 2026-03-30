@@ -1,0 +1,8 @@
+steps:
+  run-e2e-test:
+    image: golang:1.22
+    commands:
+      - GO111MODULE=off go test ./test/e2e -v -run TestEndpointServesTraffic
+
+when:
+  event: [push, pull_request]
