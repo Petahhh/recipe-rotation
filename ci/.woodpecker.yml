@@ -1,16 +1,38 @@
 steps:
-  deploy-nginx:
+  preflight-gcp-auth:
     image: google/cloud-sdk:slim
     environment:
-      GCP_SA_KEY_JSON:
-        from_secret: gcp_sa_key_json
+      # Application Default Credentials JSON (content of:
+      # ~/.config/gcloud/application_default_credentials.json).
+      GCP_ADC_JSON:
+        from_secret: gcp_adc_json
       GCP_PROJECT_ID:
         from_secret: gcp_project_id
     commands:
       - umask 077
-      - trap 'rm -f /tmp/gcp-key.json' EXIT
-      - printf '%s' "$GCP_SA_KEY_JSON" > /tmp/gcp-key.json
-      - gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
+      - trap 'rm -f /tmp/gcp-adc.json' EXIT
+      - printf '%s' "$GCP_ADC_JSON" > /tmp/gcp-adc.json
+      - export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-adc.json
+      - gcloud config set project "$GCP_PROJECT_ID"
+      - gcloud auth application-default print-access-token >/dev/null
+      - gcloud compute ssh recipe-rotation --zone us-central1-b --command "whoami && sudo -n true && echo preflight_ok"
+
+  deploy-nginx:
+    image: google/cloud-sdk:slim
+    depends_on:
+      - preflight-gcp-auth
+    environment:
+      # Application Default Credentials JSON (content of:
+      # ~/.config/gcloud/application_default_credentials.json).
+      GCP_ADC_JSON:
+        from_secret: gcp_adc_json
+      GCP_PROJECT_ID:
+        from_secret: gcp_project_id
+    commands:
+      - umask 077
+      - trap 'rm -f /tmp/gcp-adc.json' EXIT
+      - printf '%s' "$GCP_ADC_JSON" > /tmp/gcp-adc.json
+      - export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-adc.json
       - gcloud config set project "$GCP_PROJECT_ID"
       - gcloud compute ssh recipe-rotation --zone us-central1-b --command "sudo apt-get update && sudo apt-get install -y nginx && sudo systemctl enable --now nginx"
 

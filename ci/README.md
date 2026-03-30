@@ -122,16 +122,25 @@ This pipeline is configured to run on:
 Do not commit cloud credentials to git. Add them as repository secrets in Woodpecker:
 
 1. Open your repo in Woodpecker -> `Settings` -> `Secrets`
-2. Add secret `gcp_sa_key_json` with the full JSON of a Google service account key
+2. Add secret `gcp_adc_json` with the full JSON contents of:
+   `~/.config/gcloud/application_default_credentials.json`
 3. Add secret `gcp_project_id` with your GCP project ID
 
-The pipeline uses these secrets in a deploy step to install/start Nginx on:
+The pipeline uses these secrets in a deploy step to install/start Nginx on your VM.
 
 - instance: `recipe-rotation`
 - zone: `us-central1-b`
 - external IP: `34.60.141.247`
 
-Recommended IAM permissions for the service account are minimal roles required for VM SSH/admin access (for example Compute Instance Admin + OS Login/SSH permissions).
+Required IAM permissions depend on what credentials you use:
+
+- If using ADC from a logged-in user, ensure that user is allowed to:
+  - connect to the VM over SSH (OS Login / project-wide SSH permissions)
+  - start/stop/update instances as required (at minimum, the permissions needed to run your `--command`)
+
+If you tell me how you authenticated (ADC from user login vs different flow), I can suggest the least-privilege IAM roles.
+
+Note: Woodpecker pipeline containers cannot directly read `~/.config/...` from your workstation. You must provide that file contents via a Woodpecker secret (as above), or mount it into the agent container (advanced/less ideal).
 
 ## 8) Lock down a public Woodpecker instance
 
