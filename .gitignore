@@ -1,0 +1,2 @@
+ci/.env
+ci/data/woodpecker/woodpecker.sqlite
