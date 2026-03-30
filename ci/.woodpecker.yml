@@ -1,0 +1,25 @@
+steps:
+  deploy-nginx:
+    image: google/cloud-sdk:slim
+    environment:
+      GCP_SA_KEY_JSON:
+        from_secret: gcp_sa_key_json
+      GCP_PROJECT_ID:
+        from_secret: gcp_project_id
+    commands:
+      - umask 077
+      - trap 'rm -f /tmp/gcp-key.json' EXIT
+      - printf '%s' "$GCP_SA_KEY_JSON" > /tmp/gcp-key.json
+      - gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
+      - gcloud config set project "$GCP_PROJECT_ID"
+      - gcloud compute ssh recipe-rotation --zone us-central1-b --command "sudo apt-get update && sudo apt-get install -y nginx && sudo systemctl enable --now nginx"
+
+  run-e2e-test:
+    image: golang:1.22
+    depends_on:
+      - deploy-nginx
+    commands:
+      - GO111MODULE=off go test ./test/e2e -v -run TestEndpointServesTraffic
+
+when:
+  event: [push, pull_request]
