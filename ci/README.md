@@ -117,6 +117,56 @@ This pipeline is configured to run on:
 - `push`
 - `pull_request`
 
+## 7) Configure secure GCP secrets in Woodpecker
+
+Do not commit cloud credentials to git. Add them as repository secrets in Woodpecker:
+
+1. Open your repo in Woodpecker -> `Settings` -> `Secrets`
+2. Add secret `gcp_sa_key_json` with the full JSON of a Google service account key
+3. Add secret `gcp_project_id` with your GCP project ID
+
+The pipeline uses these secrets in a deploy step to install/start Nginx on:
+
+- instance: `recipe-rotation`
+- zone: `us-central1-b`
+- external IP: `34.60.141.247`
+
+Recommended IAM permissions for the service account are minimal roles required for VM SSH/admin access (for example Compute Instance Admin + OS Login/SSH permissions).
+
+## 8) Lock down a public Woodpecker instance
+
+If your Woodpecker URL is public, use these settings in `ci/.env`:
+
+```bash
+WOODPECKER_OPEN=false
+WOODPECKER_ADMIN=your-github-username
+```
+
+- `WOODPECKER_OPEN=false` disables open self-registration.
+- `WOODPECKER_ADMIN` restricts admin privileges to your account.
+
+Then restart:
+
+```bash
+./ci/deploy_local_woodpecker.sh restart
+```
+
+Also recommended:
+
+- Keep repositories private unless intentionally public.
+- Limit who can activate repositories in Woodpecker.
+- Rotate cloud keys periodically and use least-privilege IAM roles.
+
+## 9) Secret leakage and pipeline logs
+
+The deploy step writes the GCP key from a Woodpecker secret to a temporary file and removes it at the end of the step. The key value is not echoed to logs by default.
+
+To keep it safe:
+
+- Do not add `set -x` in pipeline commands.
+- Do not print environment variables or `cat` the key file.
+- Restrict secret exposure for untrusted pull requests/forks in Woodpecker secret settings.
+
 The pipeline step runs:
 
 ```bash

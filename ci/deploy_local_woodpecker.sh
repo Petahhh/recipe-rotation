@@ -39,8 +39,11 @@ WOODPECKER_GRPC_ADDR=:9000
 WOODPECKER_DATABASE_DRIVER=sqlite3
 WOODPECKER_DATABASE_DATASOURCE=/var/lib/woodpecker/woodpecker.sqlite
 
-# Allow initial user registration.
-WOODPECKER_OPEN=true
+# Security defaults:
+# - Disable open registration for internet-exposed instances.
+# - Restrict admin access to an explicit GitHub username.
+WOODPECKER_OPEN=false
+WOODPECKER_ADMIN=replace-with-your-github-username
 
 # GitHub integration (fill values after creating a GitHub OAuth app).
 WOODPECKER_GITHUB=true
