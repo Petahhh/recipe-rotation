@@ -31,11 +31,11 @@ var recipeBankPageTmpl = template.Must(template.New("recipeBank").Parse(`<!DOCTY
 <p><button type="submit">Add recipe</button></p>
 </form>
 {{range .}}
-<section class="recipe">
+<article class="recipe-card" data-recipe-name="{{.Name}}">
 <h2>{{.Name}}</h2>
 <p><a href="{{.Link}}">{{.Link}}</a></p>
 <pre>{{.Ingredients}}</pre>
-</section>
+</article>
 {{end}}
 </body>
 </html>`))
@@ -70,6 +70,13 @@ func recipeBankGetHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("recipe bank template: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 	}
+}
+
+// setRecipeBankForTest replaces the in-memory store (same-package tests only).
+func setRecipeBankForTest(rs []recipe) {
+	recipeMu.Lock()
+	defer recipeMu.Unlock()
+	recipeBank = append([]recipe(nil), rs...)
 }
 
 func recipeBankPostHandler(w http.ResponseWriter, r *http.Request) {

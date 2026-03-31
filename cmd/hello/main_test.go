@@ -179,3 +179,48 @@ func TestRecipeBankGETIncludesCreateRecipeForm(t *testing.T) {
 		t.Fatal(`GET /recipe-bank: want ingredients as <textarea name="ingredients">`)
 	}
 }
+
+// TestRecipeBankGETListsMultipleSeededRecipesAsCards documents task 8 HTML contract:
+//   - Every stored recipe is one <article class="recipe-card"> (not merely a section).
+//   - Each card has data-recipe-name set to that recipe’s display name (exact match).
+//   - Response must include both names when two recipes are seeded (via setRecipeBankForTest).
+func TestRecipeBankGETListsMultipleSeededRecipesAsCards(t *testing.T) {
+	const (
+		nameA = "Alpha Soup"
+		nameB = "Beta Stew"
+	)
+
+	recipeMu.Lock()
+	saved := append([]recipe(nil), recipeBank...)
+	recipeMu.Unlock()
+	t.Cleanup(func() {
+		recipeMu.Lock()
+		recipeBank = saved
+		recipeMu.Unlock()
+	})
+
+	setRecipeBankForTest([]recipe{
+		{Name: nameA, Link: "https://alpha.example/r", Ingredients: "broth\nnoodles"},
+		{Name: nameB, Link: "https://beta.example/r", Ingredients: "beans\nspices"},
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/recipe-bank", nil)
+	rec := httptest.NewRecorder()
+	newMux().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET /recipe-bank: want status %d, got %d", http.StatusOK, rec.Code)
+	}
+	body := rec.Body.String()
+	lower := strings.ToLower(body)
+
+	if c := strings.Count(lower, `<article class="recipe-card"`); c < 2 {
+		t.Fatalf("GET /recipe-bank: want at least two <article class=\"recipe-card\"> (one per recipe); got %d; body=%q", c, body)
+	}
+	if !strings.Contains(body, `data-recipe-name="`+nameA+`"`) {
+		t.Fatalf("GET /recipe-bank: want data-recipe-name=%q on a card; body=%q", nameA, body)
+	}
+	if !strings.Contains(body, `data-recipe-name="`+nameB+`"`) {
+		t.Fatalf("GET /recipe-bank: want data-recipe-name=%q on a card; body=%q", nameB, body)
+	}
+}

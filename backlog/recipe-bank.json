@@ -39,12 +39,12 @@
     "id": 7,
     "goal": "Add failing tests: multiple existing recipes all appear as cards on GET /recipe-bank.",
     "done_when": "New tests fail until listing works: with two recipes in the store (test injection or double), GET /recipe-bank HTML contains both names (and structured card sections as specified in test).",
-    "done_status": false
+    "done_status": true
   },
   {
     "id": 8,
     "goal": "Implement card layout listing every stored recipe under the form.",
     "done_when": "Tests for task 7 pass; go test ./... green.",
-    "done_status": false
+    "done_status": true
   }
 ]
