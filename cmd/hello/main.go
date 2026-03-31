@@ -33,6 +33,12 @@ func recipeBankHandler(w http.ResponseWriter, r *http.Request) {
 <head><meta charset="utf-8"><title>Recipe Bank</title></head>
 <body>
 <h1>Recipe Bank</h1>
+<form method="post" action="/recipe-bank">
+<p><label>Name <input type="text" name="name"></label></p>
+<p><label>Link <input type="url" name="link"></label></p>
+<p><label>Ingredients <textarea name="ingredients" rows="4" cols="40"></textarea></label></p>
+<p><button type="submit">Add recipe</button></p>
+</form>
 </body>
 </html>`)
 }

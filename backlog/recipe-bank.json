@@ -15,13 +15,13 @@
     "id": 3,
     "goal": "Add failing tests: recipe bank page exposes a create-recipe form (name, link, ingredients).",
     "done_when": "New tests fail until form exists: GET /recipe-bank HTML includes a POST form with name, link, and ingredients (textarea or equivalent).",
-    "done_status": false
+    "done_status": true
   },
   {
     "id": 4,
     "goal": "Implement the create-recipe form markup on GET /recipe-bank.",
     "done_when": "Tests for task 3 pass.",
-    "done_status": false
+    "done_status": true
   },
   {
     "id": 5,
