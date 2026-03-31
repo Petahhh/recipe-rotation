@@ -16,6 +16,15 @@ steps:
       # Explicit user@instance so gcloud does not default to root (often denied). Change ubuntu if your image uses another login.
       - gcloud compute ssh ubuntu@recipe-rotation --zone us-central1-b --command "whoami && sudo -n true && echo preflight_ok"
 
+  build-app:
+    image: golang:1.22
+    environment:
+      GOOS: linux
+      GOARCH: amd64
+      CGO_ENABLED: "0"
+    commands:
+      - go build -ldflags="-s -w" -o recipe-rotation ./cmd/hello
+
   deploy-nginx:
     image: google/cloud-sdk:slim
     depends_on:
@@ -34,12 +43,35 @@ steps:
       - gcloud config set project "$GCP_PROJECT_ID"
       - gcloud compute ssh ubuntu@recipe-rotation --zone us-central1-b --command "sudo apt-get update && sudo apt-get install -y nginx && sudo systemctl enable --now nginx && sudo systemctl is-active nginx"
 
+  deploy-app:
+    image: google/cloud-sdk:slim
+    depends_on:
+      - deploy-nginx
+      - build-app
+    environment:
+      CLOUDSDK_CORE_DISABLE_PROMPTS: "1"
+      GCP_SA_KEY_JSON:
+        from_secret: gcp_sa_key_json
+      GCP_PROJECT_ID:
+        from_secret: gcp_project_id
+    commands:
+      - umask 077
+      - trap 'rm -f /tmp/gcp-sa-key.json' EXIT
+      - printf '%s' "$GCP_SA_KEY_JSON" > /tmp/gcp-sa-key.json
+      - gcloud auth activate-service-account --key-file=/tmp/gcp-sa-key.json
+      - gcloud config set project "$GCP_PROJECT_ID"
+      - gcloud compute scp --zone=us-central1-b ./recipe-rotation ubuntu@recipe-rotation:/tmp/recipe-rotation
+      - gcloud compute scp --zone=us-central1-b ./deploy/recipe-rotation.service ubuntu@recipe-rotation:/tmp/recipe-rotation.service
+      - gcloud compute scp --zone=us-central1-b ./deploy/nginx-recipe-rotation.conf ubuntu@recipe-rotation:/tmp/nginx-recipe-rotation.conf
+      - gcloud compute scp --zone=us-central1-b ./deploy/remote-setup.sh ubuntu@recipe-rotation:/tmp/remote-setup.sh
+      - gcloud compute ssh ubuntu@recipe-rotation --zone us-central1-b --command "sudo bash /tmp/remote-setup.sh"
+
   run-e2e-test:
     image: golang:1.22
     depends_on:
-      - deploy-nginx
+      - deploy-app
     commands:
-      - GO111MODULE=off go test ./test/e2e -v -run TestEndpointServesTraffic
+      - go test ./test/e2e -v -run TestEndpointServesTraffic
 
 when:
   event: [push, pull_request]

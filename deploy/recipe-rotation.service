@@ -1,0 +1,15 @@
+[Unit]
+Description=Recipe rotation HTTP server
+After=network.target
+
+[Service]
+Type=simple
+Environment=PORT=8080
+ExecStart=/usr/local/bin/recipe-rotation
+Restart=on-failure
+RestartSec=3
+User=www-data
+Group=www-data
+
+[Install]
+WantedBy=multi-user.target

@@ -175,10 +175,10 @@ To keep it safe:
 The pipeline step runs:
 
 ```bash
-GO111MODULE=off go test ./test/e2e -v -run TestEndpointServesTraffic
+go test ./test/e2e -v -run TestEndpointServesTraffic
 ```
 
-After a successful deploy, Nginx should answer on port 80; if the VM or firewall is not ready, the e2e step may still fail until HTTP returns 2xx.
+The pipeline installs nginx, then cross-builds `cmd/hello` for **linux/amd64**, copies the binary plus `deploy/*` to the VM, runs a **systemd** unit on port **8080**, and configures nginx to **reverse-proxy** port **80** to the app (so the e2e check for `recipe rotation` hits the Go server). If the VM is **ARM** (e.g. T2A), change `GOARCH` in `ci/.woodpecker.yml` to `arm64`.
 
 ## Useful commands
 

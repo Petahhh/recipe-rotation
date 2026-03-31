@@ -4,7 +4,7 @@ This folder contains an end-to-end Go test that checks whether traffic is being 
 
 - `http://34.60.141.247:80/`
 
-The test expects a successful HTTP `2xx` response. Because nothing is deployed there yet, the test is expected to fail for now.
+The test expects a successful HTTP `2xx` response and a body that contains the text `recipe rotation` (e.g. from your nginx site).
 
 ## Prerequisites
 
@@ -12,14 +12,14 @@ The test expects a successful HTTP `2xx` response. Because nothing is deployed t
 
 ## Run the test
 
-From the repository root (this project currently has no `go.mod`):
+From the repository root:
 
 ```bash
-GO111MODULE=off go test ./test/e2e -v
+go test ./test/e2e -v
 ```
 
 Or from this folder:
 
 ```bash
-GO111MODULE=off go test -v
+go test -v
 ```
