@@ -27,13 +27,13 @@
     "id": 5,
     "goal": "Add failing tests: submitting the form persists a recipe and it appears on the page.",
     "done_when": "New tests fail until POST works: POST /recipe-bank with encoded fields then GET /recipe-bank (or redirect chain) shows the submitted name (and ideally link and ingredients) in the response body.",
-    "done_status": false
+    "done_status": true
   },
   {
     "id": 6,
     "goal": "Implement POST /recipe-bank to save recipes and show them after submit.",
     "done_when": "Tests for task 5 pass.",
-    "done_status": false
+    "done_status": true
   },
   {
     "id": 7,
