@@ -16,15 +16,6 @@ steps:
       # Explicit user@instance so gcloud does not default to root (often denied). Change ubuntu if your image uses another login.
       - gcloud compute ssh ubuntu@recipe-rotation --zone us-central1-b --command "whoami && sudo -n true && echo preflight_ok"
 
-  build-app:
-    image: golang:1.22
-    environment:
-      GOOS: linux
-      GOARCH: amd64
-      CGO_ENABLED: "0"
-    commands:
-      - go build -ldflags="-s -w" -o recipe-rotation ./cmd/hello
-
   deploy-nginx:
     image: google/cloud-sdk:slim
     depends_on:
@@ -44,17 +35,27 @@ steps:
       - gcloud compute ssh ubuntu@recipe-rotation --zone us-central1-b --command "sudo apt-get update && sudo apt-get install -y nginx && sudo systemctl enable --now nginx && sudo systemctl is-active nginx"
 
   deploy-app:
-    image: google/cloud-sdk:slim
+    image: golang:1.22
     depends_on:
       - deploy-nginx
-      - build-app
     environment:
+      GOOS: linux
+      GOARCH: amd64
+      CGO_ENABLED: "0"
       CLOUDSDK_CORE_DISABLE_PROMPTS: "1"
       GCP_SA_KEY_JSON:
         from_secret: gcp_sa_key_json
       GCP_PROJECT_ID:
         from_secret: gcp_project_id
     commands:
+      - |
+        set -eu
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update -qq && apt-get install -y -qq apt-transport-https ca-certificates curl gnupg
+        curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg
+        echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" > /etc/apt/sources.list.d/google-cloud-sdk.list
+        apt-get update -qq && apt-get install -y -qq google-cloud-cli
+      - go build -ldflags="-s -w" -o recipe-rotation ./cmd/hello
       - umask 077
       - trap 'rm -f /tmp/gcp-sa-key.json' EXIT
       - printf '%s' "$GCP_SA_KEY_JSON" > /tmp/gcp-sa-key.json

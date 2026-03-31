@@ -8,7 +8,9 @@ install -m 644 /tmp/nginx-recipe-rotation.conf /etc/nginx/sites-available/recipe
 rm -f /etc/nginx/sites-enabled/default
 ln -sf /etc/nginx/sites-available/recipe-rotation /etc/nginx/sites-enabled/recipe-rotation
 systemctl daemon-reload
-systemctl enable --now recipe-rotation
+systemctl enable recipe-rotation
+# Replace binary on disk does not affect the running process; restart loads the new build.
+systemctl restart recipe-rotation
 systemctl is-active recipe-rotation
 nginx -t
 systemctl reload nginx
