@@ -1,0 +1,50 @@
+[
+  {
+    "id": 1,
+    "goal": "Add failing tests: home page links to Recipe Bank and GET /recipe-bank succeeds.",
+    "done_when": "New tests fail on current code: GET / returns HTML containing a link to /recipe-bank; GET /recipe-bank returns status 200 and HTML.",
+    "done_status": false
+  },
+  {
+    "id": 2,
+    "goal": "Implement home HTML with Recipe Bank link and a GET /recipe-bank page; keep recipe rotation visible on home.",
+    "done_when": "Tests for task 1 pass; go test ./... green for covered packages.",
+    "done_status": false
+  },
+  {
+    "id": 3,
+    "goal": "Add failing tests: recipe bank page exposes a create-recipe form (name, link, ingredients).",
+    "done_when": "New tests fail until form exists: GET /recipe-bank HTML includes a POST form with name, link, and ingredients (textarea or equivalent).",
+    "done_status": false
+  },
+  {
+    "id": 4,
+    "goal": "Implement the create-recipe form markup on GET /recipe-bank.",
+    "done_when": "Tests for task 3 pass.",
+    "done_status": false
+  },
+  {
+    "id": 5,
+    "goal": "Add failing tests: submitting the form persists a recipe and it appears on the page.",
+    "done_when": "New tests fail until POST works: POST /recipe-bank with encoded fields then GET /recipe-bank (or redirect chain) shows the submitted name (and ideally link and ingredients) in the response body.",
+    "done_status": false
+  },
+  {
+    "id": 6,
+    "goal": "Implement POST /recipe-bank to save recipes and show them after submit.",
+    "done_when": "Tests for task 5 pass.",
+    "done_status": false
+  },
+  {
+    "id": 7,
+    "goal": "Add failing tests: multiple existing recipes all appear as cards on GET /recipe-bank.",
+    "done_when": "New tests fail until listing works: with two recipes in the store (test injection or double), GET /recipe-bank HTML contains both names (and structured card sections as specified in test).",
+    "done_status": false
+  },
+  {
+    "id": 8,
+    "goal": "Implement card layout listing every stored recipe under the form.",
+    "done_when": "Tests for task 7 pass; go test ./... green.",
+    "done_status": false
+  }
+]
