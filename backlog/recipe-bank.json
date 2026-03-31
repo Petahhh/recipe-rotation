@@ -3,13 +3,13 @@
     "id": 1,
     "goal": "Add failing tests: home page links to Recipe Bank and GET /recipe-bank succeeds.",
     "done_when": "New tests fail on current code: GET / returns HTML containing a link to /recipe-bank; GET /recipe-bank returns status 200 and HTML.",
-    "done_status": false
+    "done_status": true
   },
   {
     "id": 2,
     "goal": "Implement home HTML with Recipe Bank link and a GET /recipe-bank page; keep recipe rotation visible on home.",
     "done_when": "Tests for task 1 pass; go test ./... green for covered packages.",
-    "done_status": false
+    "done_status": true
   },
   {
     "id": 3,
