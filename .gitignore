@@ -1,3 +1,4 @@
 ci/.env
 ci/data/woodpecker/woodpecker.sqlite
 /recipe-rotation
+/data/

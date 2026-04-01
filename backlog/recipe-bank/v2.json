@@ -27,13 +27,13 @@
     "id": 5,
     "goal": "Add failing test: recipe survives closing the DB and opening a new connection to the same file path.",
     "done_when": "Single unit test: temp file path; connection/store A migrates + creates one recipe + closes; connection/store B opens same path, List returns that recipe with same fields (persistence, not :memory: only).",
-    "done_status": false
+    "done_status": true
   },
   {
     "id": 6,
     "goal": "Wire file-backed DB path (e.g. RECIPE_DB_PATH) and app lifecycle so handlers use the repository; default suitable for local and VM deploy.",
     "done_when": "Tests for task 5 pass.",
-    "done_status": false
+    "done_status": true
   },
   {
     "id": 7,

@@ -5,6 +5,8 @@ After=network.target
 [Service]
 Type=simple
 Environment=PORT=8080
+Environment=RECIPE_DB_PATH=/var/lib/recipe-rotation/recipes.db
+WorkingDirectory=/var/lib/recipe-rotation
 ExecStart=/usr/local/bin/recipe-rotation
 Restart=on-failure
 RestartSec=3

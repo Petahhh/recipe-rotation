@@ -1,22 +1,16 @@
 package main
 
 import (
+	"database/sql"
 	"html/template"
 	"log"
 	"net/http"
 	"os"
-	"sync"
-)
+	"path/filepath"
 
-type recipe struct {
-	Name        string
-	Link        string
-	Ingredients string
-}
+	"recipe-rotation-2/internal/recipes"
 
-var (
-	recipeMu   sync.Mutex
-	recipeBank []recipe
+	_ "modernc.org/sqlite"
 )
 
 var recipeBankPageTmpl = template.Must(template.New("recipeBank").Parse(`<!DOCTYPE html>
@@ -40,15 +34,21 @@ var recipeBankPageTmpl = template.Must(template.New("recipeBank").Parse(`<!DOCTY
 </body>
 </html>`))
 
-func newMux() http.Handler {
+type server struct {
+	store *recipes.Store
+	tmpl  *template.Template
+}
+
+func newMux(store *recipes.Store) http.Handler {
+	srv := &server{store: store, tmpl: recipeBankPageTmpl}
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /{$}", homeHandler)
-	mux.HandleFunc("GET /recipe-bank", recipeBankGetHandler)
-	mux.HandleFunc("POST /recipe-bank", recipeBankPostHandler)
+	mux.HandleFunc("GET /{$}", srv.homeHandler)
+	mux.HandleFunc("GET /recipe-bank", srv.recipeBankGetHandler)
+	mux.HandleFunc("POST /recipe-bank", srv.recipeBankPostHandler)
 	return mux
 }
 
-func homeHandler(w http.ResponseWriter, r *http.Request) {
+func (s *server) homeHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = w.Write([]byte(`<!DOCTYPE html>
 <html lang="en">
@@ -60,26 +60,22 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 </html>`))
 }
 
-func recipeBankGetHandler(w http.ResponseWriter, r *http.Request) {
-	recipeMu.Lock()
-	list := append([]recipe(nil), recipeBank...)
-	recipeMu.Unlock()
+func (s *server) recipeBankGetHandler(w http.ResponseWriter, r *http.Request) {
+	list, err := s.store.List(r.Context())
+	if err != nil {
+		log.Printf("recipe list: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := recipeBankPageTmpl.Execute(w, list); err != nil {
+	if err := s.tmpl.Execute(w, list); err != nil {
 		log.Printf("recipe bank template: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 	}
 }
 
-// setRecipeBankForTest replaces the in-memory store (same-package tests only).
-func setRecipeBankForTest(rs []recipe) {
-	recipeMu.Lock()
-	defer recipeMu.Unlock()
-	recipeBank = append([]recipe(nil), rs...)
-}
-
-func recipeBankPostHandler(w http.ResponseWriter, r *http.Request) {
+func (s *server) recipeBankPostHandler(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
@@ -88,24 +84,49 @@ func recipeBankPostHandler(w http.ResponseWriter, r *http.Request) {
 	link := r.FormValue("link")
 	ingredients := r.FormValue("ingredients")
 
-	recipeMu.Lock()
-	recipeBank = append(recipeBank, recipe{
-		Name:        name,
-		Link:        link,
-		Ingredients: ingredients,
-	})
-	recipeMu.Unlock()
+	if _, err := s.store.Create(r.Context(), name, link, ingredients); err != nil {
+		log.Printf("recipe create: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Location", "/recipe-bank")
 	w.WriteHeader(http.StatusSeeOther)
 }
 
+func openRecipeDB() (*sql.DB, error) {
+	path := os.Getenv("RECIPE_DB_PATH")
+	if path == "" {
+		path = "data/recipes.db"
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0750); err != nil {
+		return nil, err
+	}
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		return nil, err
+	}
+	if err := recipes.Migrate(db); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	return db, nil
+}
+
 func main() {
+	db, err := openRecipeDB()
+	if err != nil {
+		log.Fatalf("recipe db: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	store := recipes.NewStore(db)
+
 	addr := ":8080"
 	if p := os.Getenv("PORT"); p != "" {
 		addr = ":" + p
 	}
 
 	log.Printf("listening on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, newMux()))
+	log.Fatal(http.ListenAndServe(addr, newMux(store)))
 }

@@ -1,13 +1,33 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
+
+	"recipe-rotation-2/internal/recipes"
+
+	_ "modernc.org/sqlite"
 )
+
+func newTestMux(t *testing.T) http.Handler {
+	t.Helper()
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := recipes.Migrate(db); err != nil {
+		_ = db.Close()
+		t.Fatalf("Migrate: %v", err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	return newMux(recipes.NewStore(db))
+}
 
 // muxRoundTripper runs requests through the given handler (no real network).
 type muxRoundTripper struct {
@@ -31,7 +51,7 @@ func TestRecipeBankPOSTPersistsRecipeVisibleOnGET(t *testing.T) {
 		wantIngredients = "pasta\nolive oil\nvegetables"
 	)
 
-	mux := newMux()
+	mux := newTestMux(t)
 	client := &http.Client{
 		Transport:     &muxRoundTripper{mux: mux},
 		CheckRedirect: func(*http.Request, []*http.Request) error { return nil },
@@ -111,7 +131,7 @@ func TestHomeReturnsHTMLWithRecipeBankLink(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
-	newMux().ServeHTTP(rec, req)
+	newTestMux(t).ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("GET /: want status %d, got %d", http.StatusOK, rec.Code)
@@ -131,7 +151,7 @@ func TestRecipeBankGETReturns200AndHTML(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/recipe-bank", nil)
 	rec := httptest.NewRecorder()
-	newMux().ServeHTTP(rec, req)
+	newTestMux(t).ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("GET /recipe-bank: want status %d, got %d", http.StatusOK, rec.Code)
@@ -152,7 +172,7 @@ func TestRecipeBankGETIncludesCreateRecipeForm(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/recipe-bank", nil)
 	rec := httptest.NewRecorder()
-	newMux().ServeHTTP(rec, req)
+	newTestMux(t).ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("GET /recipe-bank: want status %d, got %d", http.StatusOK, rec.Code)
@@ -183,30 +203,34 @@ func TestRecipeBankGETIncludesCreateRecipeForm(t *testing.T) {
 // TestRecipeBankGETListsMultipleSeededRecipesAsCards documents task 8 HTML contract:
 //   - Every stored recipe is one <article class="recipe-card"> (not merely a section).
 //   - Each card has data-recipe-name set to that recipe’s display name (exact match).
-//   - Response must include both names when two recipes are seeded (via setRecipeBankForTest).
+//   - Response must include both names when two recipes exist in the store.
 func TestRecipeBankGETListsMultipleSeededRecipesAsCards(t *testing.T) {
 	const (
 		nameA = "Alpha Soup"
 		nameB = "Beta Stew"
 	)
 
-	recipeMu.Lock()
-	saved := append([]recipe(nil), recipeBank...)
-	recipeMu.Unlock()
-	t.Cleanup(func() {
-		recipeMu.Lock()
-		recipeBank = saved
-		recipeMu.Unlock()
-	})
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if err := recipes.Migrate(db); err != nil {
+		t.Fatalf("Migrate: %v", err)
+	}
+	store := recipes.NewStore(db)
+	ctx := context.Background()
+	if _, err := store.Create(ctx, nameA, "https://alpha.example/r", "broth\nnoodles"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.Create(ctx, nameB, "https://beta.example/r", "beans\nspices"); err != nil {
+		t.Fatal(err)
+	}
 
-	setRecipeBankForTest([]recipe{
-		{Name: nameA, Link: "https://alpha.example/r", Ingredients: "broth\nnoodles"},
-		{Name: nameB, Link: "https://beta.example/r", Ingredients: "beans\nspices"},
-	})
-
+	mux := newMux(store)
 	req := httptest.NewRequest(http.MethodGet, "/recipe-bank", nil)
 	rec := httptest.NewRecorder()
-	newMux().ServeHTTP(rec, req)
+	mux.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("GET /recipe-bank: want status %d, got %d", http.StatusOK, rec.Code)

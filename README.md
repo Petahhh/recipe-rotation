@@ -1,6 +1,6 @@
 # recipe-rotation-2
 
-Small Go web app: recipe rotation home page and a recipe bank (create and list recipes in memory).
+Small Go web app: recipe rotation home page and a recipe bank (recipes stored in SQLite).
 
 ## Prerequisites
 
@@ -29,6 +29,8 @@ Or run the binary you built:
 ```
 
 By default the server listens on **port 8080** (`http://127.0.0.1:8080/`).
+
+Recipes are stored in a SQLite file. If **`RECIPE_DB_PATH`** is unset, the app uses **`data/recipes.db`** under the current working directory (the `data/` directory is created if needed). Override with an absolute path in production.
 
 To use another port, set `PORT` to the numeric port only (the app prepends `:`):
 
