@@ -63,24 +63,24 @@
     "id": 11,
     "goal": "Add failing test: GET /recipe-bank/{id}/edit returns HTML form fields pre-filled with that recipe.",
     "done_when": "Single test: seed recipe with known name/link/ingredients, GET /recipe-bank/{id}/edit returns 200, text/html, body contains input/textarea values or value attributes matching seeded strings.",
-    "done_status": false
+    "done_status": true
   },
   {
     "id": 12,
     "goal": "Implement GET /recipe-bank/{id}/edit page (template + load by id).",
     "done_when": "Tests for task 11 pass.",
-    "done_status": false
+    "done_status": true
   },
   {
     "id": 13,
     "goal": "Add failing test: POST save from edit form updates DB; subsequent GET reflects new values.",
     "done_when": "Single test: seed recipe, POST update with changed name/link/ingredients (same form field names as test contract), then GET /recipe-bank or GET edit page shows updated strings, not originals.",
-    "done_status": false
+    "done_status": true
   },
   {
     "id": 14,
     "goal": "Implement POST handler to update recipe by id; redirect after success; validate id exists.",
     "done_when": "Tests for task 13 pass; go test ./... green for covered packages.",
-    "done_status": false
+    "done_status": true
   }
 ]

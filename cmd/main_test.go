@@ -403,3 +403,163 @@ func TestRecipeBankPOSTDeleteUnknownIDReturns404(t *testing.T) {
 		t.Fatalf("POST delete unknown id: want status %d, got %d", http.StatusNotFound, rec.Code)
 	}
 }
+
+// TestRecipeBankGETEditPrefillsForm (v2 id 11): edit page must expose name/link/ingredients for the seeded row.
+func TestRecipeBankGETEditPrefillsForm(t *testing.T) {
+	ctx := context.Background()
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if err := recipes.Migrate(db); err != nil {
+		t.Fatalf("Migrate: %v", err)
+	}
+	store := recipes.NewStore(db)
+
+	const (
+		wantName        = "Edit Test Curry"
+		wantLink        = "https://example.com/curry"
+		wantIngredients = "spice\nrice"
+	)
+	id, err := store.Create(ctx, wantName, wantLink, wantIngredients)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mux := newMux(store)
+	editPath := fmt.Sprintf("/recipe-bank/%d/edit", id)
+	req := httptest.NewRequest(http.MethodGet, editPath, nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET %s: want status %d, got %d; body=%q", editPath, http.StatusOK, rec.Code, rec.Body.String())
+	}
+	ct := rec.Header().Get("Content-Type")
+	if !strings.Contains(strings.ToLower(ct), "text/html") {
+		t.Fatalf("GET %s: want HTML content type, got Content-Type %q", editPath, ct)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, `name="name"`) {
+		t.Fatalf("GET %s: want name field name=\"name\"; body=%q", editPath, body)
+	}
+	if !strings.Contains(body, `name="link"`) {
+		t.Fatalf("GET %s: want link field name=\"link\"; body=%q", editPath, body)
+	}
+	if !strings.Contains(body, `name="ingredients"`) {
+		t.Fatalf("GET %s: want ingredients field name=\"ingredients\"; body=%q", editPath, body)
+	}
+	if !strings.Contains(body, `value="`+wantName+`"`) && !strings.Contains(body, `value='`+wantName+`'`) {
+		t.Fatalf("GET %s: want name input value %q; body=%q", editPath, wantName, body)
+	}
+	if !strings.Contains(body, `value="`+wantLink+`"`) && !strings.Contains(body, `value='`+wantLink+`'`) {
+		t.Fatalf("GET %s: want link input value %q; body=%q", editPath, wantLink, body)
+	}
+	if !strings.Contains(body, wantIngredients) {
+		t.Fatalf("GET %s: want ingredients text %q in body; body=%q", editPath, wantIngredients, body)
+	}
+}
+
+// TestRecipeBankPOSTEditUpdatesRecipeVisibleOnGET (v2 id 13): POST edit form persists; list shows new values, not originals.
+func TestRecipeBankPOSTEditUpdatesRecipeVisibleOnGET(t *testing.T) {
+	ctx := context.Background()
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if err := recipes.Migrate(db); err != nil {
+		t.Fatalf("Migrate: %v", err)
+	}
+	store := recipes.NewStore(db)
+
+	const (
+		oldName        = "Original Chowder"
+		oldLink        = "https://example.com/old-chowder"
+		oldIngredients = "potato\ncream"
+		newName        = "Updated Bisque"
+		newLink        = "https://example.com/new-bisque"
+		newIngredients = "lobster\nsherry"
+	)
+	id, err := store.Create(ctx, oldName, oldLink, oldIngredients)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mux := newMux(store)
+	clientNoFollow := &http.Client{
+		Transport: &muxRoundTripper{mux: mux},
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	client := &http.Client{
+		Transport:     &muxRoundTripper{mux: mux},
+		CheckRedirect: func(*http.Request, []*http.Request) error { return nil },
+	}
+
+	editURL := fmt.Sprintf("http://example.com/recipe-bank/%d/edit", id)
+	form := url.Values{}
+	form.Set("name", newName)
+	form.Set("link", newLink)
+	form.Set("ingredients", newIngredients)
+	postReq, err := http.NewRequest(http.MethodPost, editURL, strings.NewReader(form.Encode()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	postReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	postResp, err := clientNoFollow.Do(postReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = io.Copy(io.Discard, postResp.Body)
+	postResp.Body.Close()
+
+	if postResp.StatusCode != http.StatusSeeOther {
+		t.Fatalf("POST %s: want status %d, got %d", editURL, http.StatusSeeOther, postResp.StatusCode)
+	}
+	loc := postResp.Header.Get("Location")
+	if loc == "" {
+		t.Fatalf("POST %s: want Location header", editURL)
+	}
+	locURL, err := postReq.URL.Parse(loc)
+	if err != nil {
+		t.Fatalf("POST %s: bad Location %q: %v", editURL, loc, err)
+	}
+	if locURL.Path != "/recipe-bank" {
+		t.Fatalf("POST %s: want redirect to /recipe-bank, got %q", editURL, locURL.Path)
+	}
+
+	getReq, err := http.NewRequest(http.MethodGet, "http://example.com/recipe-bank", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	getResp, err := client.Do(getReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer getResp.Body.Close()
+	getBody, err := io.ReadAll(getResp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := string(getBody)
+
+	if getResp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /recipe-bank after edit: want status %d, got %d; body=%q", http.StatusOK, getResp.StatusCode, body)
+	}
+	if !strings.Contains(body, newName) {
+		t.Fatalf("GET /recipe-bank: want updated name %q in body; got %q", newName, body)
+	}
+	if !strings.Contains(body, newLink) {
+		t.Fatalf("GET /recipe-bank: want updated link %q in body; got %q", newLink, body)
+	}
+	if !strings.Contains(body, newIngredients) {
+		t.Fatalf("GET /recipe-bank: want updated ingredients %q in body; got %q", newIngredients, body)
+	}
+	if strings.Contains(body, oldName) {
+		t.Fatalf("GET /recipe-bank: body must not include original name %q; got %q", oldName, body)
+	}
+}

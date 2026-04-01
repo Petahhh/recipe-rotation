@@ -52,6 +52,40 @@ func (s *Store) List(ctx context.Context) ([]Recipe, error) {
 	return out, rows.Err()
 }
 
+// GetByID returns the recipe with the given id. ErrNotFound if it does not exist.
+func (s *Store) GetByID(ctx context.Context, id int64) (Recipe, error) {
+	row := s.db.QueryRowContext(ctx,
+		`SELECT id, name, link, ingredients FROM recipes WHERE id = ?`, id)
+	var r Recipe
+	err := row.Scan(&r.ID, &r.Name, &r.Link, &r.Ingredients)
+	if err == sql.ErrNoRows {
+		return Recipe{}, ErrNotFound
+	}
+	if err != nil {
+		return Recipe{}, err
+	}
+	return r, nil
+}
+
+// Update sets name, link, and ingredients for the recipe with the given id. ErrNotFound if no row was updated.
+func (s *Store) Update(ctx context.Context, id int64, name, link, ingredients string) error {
+	res, err := s.db.ExecContext(ctx,
+		`UPDATE recipes SET name = ?, link = ?, ingredients = ? WHERE id = ?`,
+		name, link, ingredients, id,
+	)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 // Delete removes the recipe with the given id. ErrNotFound if no row was deleted.
 func (s *Store) Delete(ctx context.Context, id int64) error {
 	res, err := s.db.ExecContext(ctx, `DELETE FROM recipes WHERE id = ?`, id)
