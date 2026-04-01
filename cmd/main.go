@@ -29,6 +29,10 @@ var recipeBankPageTmpl = template.Must(template.New("recipeBank").Parse(`<!DOCTY
 <h2>{{.Name}}</h2>
 <p><a href="{{.Link}}">{{.Link}}</a></p>
 <pre>{{.Ingredients}}</pre>
+<p><a href="/recipe-bank/{{.ID}}/edit">Edit</a></p>
+<form method="post" action="/recipe-bank/{{.ID}}/delete">
+<p><button type="submit">Delete</button></p>
+</form>
 </article>
 {{end}}
 </body>

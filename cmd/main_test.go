@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -197,6 +198,66 @@ func TestRecipeBankGETIncludesCreateRecipeForm(t *testing.T) {
 	}
 	if !strings.Contains(lower, "<textarea") || !strings.Contains(body, `name="ingredients"`) {
 		t.Fatal(`GET /recipe-bank: want ingredients as <textarea name="ingredients">`)
+	}
+}
+
+// TestRecipeBankGETIncludesEditAndDeletePerCard (v2 id 7) requires each recipe card to expose
+// an edit link and a POST delete form for that row's id.
+func TestRecipeBankGETIncludesEditAndDeletePerCard(t *testing.T) {
+	ctx := context.Background()
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if err := recipes.Migrate(db); err != nil {
+		t.Fatalf("Migrate: %v", err)
+	}
+	store := recipes.NewStore(db)
+	id, err := store.Create(ctx, "Solo Pie", "https://example.com/pie", "crust\nfilling")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mux := newMux(store)
+	req := httptest.NewRequest(http.MethodGet, "/recipe-bank", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET /recipe-bank: want status %d, got %d", http.StatusOK, rec.Code)
+	}
+	body := rec.Body.String()
+	wantEdit := fmt.Sprintf(`/recipe-bank/%d/edit`, id)
+	if !strings.Contains(body, `href="`+wantEdit+`"`) && !strings.Contains(body, `href='`+wantEdit+`'`) {
+		t.Fatalf("GET /recipe-bank: want edit link href %q in body; got %q", wantEdit, body)
+	}
+
+	wantDeleteAction := fmt.Sprintf(`/recipe-bank/%d/delete`, id)
+	delAttr := `action="` + wantDeleteAction + `"`
+	idx := strings.Index(body, delAttr)
+	if idx < 0 {
+		delAttr = `action='` + wantDeleteAction + `'`
+		idx = strings.Index(body, delAttr)
+	}
+	if idx < 0 {
+		t.Fatalf("GET /recipe-bank: want delete form action %q in body; got %q", wantDeleteAction, body)
+	}
+	formStart := strings.LastIndex(body[:idx], "<form")
+	if formStart < 0 {
+		t.Fatal("GET /recipe-bank: delete action must appear inside a <form>")
+	}
+	formEndRel := strings.Index(body[idx:], "</form>")
+	if formEndRel < 0 {
+		t.Fatal("GET /recipe-bank: unclosed delete form")
+	}
+	formEnd := idx + formEndRel + len("</form>")
+	seg := strings.ToLower(body[formStart:formEnd])
+	if !strings.Contains(seg, `method="post"`) && !strings.Contains(seg, `method='post'`) {
+		t.Fatalf("GET /recipe-bank: delete form must use POST; segment=%q", seg)
+	}
+	if !strings.Contains(seg, `type="submit"`) && !strings.Contains(seg, `type='submit'`) {
+		t.Fatalf("GET /recipe-bank: delete form must include submit; segment=%q", seg)
 	}
 }
 

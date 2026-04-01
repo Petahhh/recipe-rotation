@@ -39,13 +39,13 @@
     "id": 7,
     "goal": "Add failing test: GET /recipe-bank HTML includes per-card edit and delete controls when at least one recipe exists in DB.",
     "done_when": "Single test: seed DB with one recipe, GET /recipe-bank via mux returns 200 and body contains per recipe-card: a link to /recipe-bank/{id}/edit (id matching seeded row) and a POST form with action targeting delete for that id (e.g. POST /recipe-bank/{id}/delete) with a submit control (button or input type=submit).",
-    "done_status": false
+    "done_status": true
   },
   {
     "id": 8,
     "goal": "Implement recipe card template updates: edit link and delete form/button; pass recipe id into list template data.",
     "done_when": "Tests for task 7 pass.",
-    "done_status": false
+    "done_status": true
   },
   {
     "id": 9,
