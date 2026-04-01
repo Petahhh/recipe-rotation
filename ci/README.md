@@ -178,7 +178,7 @@ The pipeline step runs:
 go test ./test/e2e -v -run TestEndpointServesTraffic
 ```
 
-The pipeline installs nginx, then cross-builds `cmd/hello` for **linux/amd64**, copies the binary plus `deploy/*` to the VM, runs a **systemd** unit on port **8080**, and configures nginx to **reverse-proxy** port **80** to the app (so the e2e check for `recipe rotation` hits the Go server). If the VM is **ARM** (e.g. T2A), change `GOARCH` in `ci/.woodpecker.yml` to `arm64`.
+The pipeline installs nginx, then cross-builds `cmd` for **linux/amd64**, copies the binary plus `deploy/*` to the VM, runs a **systemd** unit on port **8080**, and configures nginx to **reverse-proxy** port **80** to the app (so the e2e check for `recipe rotation` hits the Go server). If the VM is **ARM** (e.g. T2A), change `GOARCH` in `ci/.woodpecker.yml` to `arm64`.
 
 ## Useful commands
 
