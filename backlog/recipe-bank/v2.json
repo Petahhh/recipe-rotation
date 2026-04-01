@@ -15,13 +15,13 @@
     "id": 3,
     "goal": "Add failing test: repository Create then List returns one recipe with correct fields and non-zero id.",
     "done_when": "Single unit test: after migrate, Create with known name/link/ingredients, then List (or ListAll) returns exactly one item matching those fields and id != 0.",
-    "done_status": false
+    "done_status": true
   },
   {
     "id": 4,
     "goal": "Implement recipe insert and list in the repository backed by SQLite.",
     "done_when": "Tests for task 3 pass.",
-    "done_status": false
+    "done_status": true
   },
   {
     "id": 5,
