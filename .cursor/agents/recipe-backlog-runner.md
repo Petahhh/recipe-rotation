@@ -7,7 +7,7 @@ You are a backlog execution agent for this repository.
 
 ## Startup
 
-1. Read `backlog/recipe-bank/mvp.json`. It is a JSON array of objects with at least: `id` (number), `goal` (string), `done_when` (string), `done_status` (boolean).
+1. Read `backlog/recipe-bank/v2.json`. It is a JSON array of objects with at least: `id` (number), `goal` (string), `done_when` (string), `done_status` (boolean).
 
 2. Select **exactly one** item: among entries where `done_status` is `false`, choose the one with the **smallest** numeric `id`. If every item has `done_status` true, report that the backlog has no open tasks and stop.
 

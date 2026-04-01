@@ -1,0 +1,86 @@
+[
+  {
+    "id": 1,
+    "goal": "Add failing test: SQLite migrations create a recipes table.",
+    "done_when": "Single unit test fails until schema exists: open a fresh SQLite DSN (e.g. :memory: or temp file), run migrations, assert table recipes exists (e.g. sqlite_master or PRAGMA table_info(recipes) returns rows).",
+    "done_status": false
+  },
+  {
+    "id": 2,
+    "goal": "Implement SQLite open + migrations for recipes (id PK, name, link, ingredients; optional created_at).",
+    "done_when": "Tests for task 1 pass.",
+    "done_status": false
+  },
+  {
+    "id": 3,
+    "goal": "Add failing test: repository Create then List returns one recipe with correct fields and non-zero id.",
+    "done_when": "Single unit test: after migrate, Create with known name/link/ingredients, then List (or ListAll) returns exactly one item matching those fields and id != 0.",
+    "done_status": false
+  },
+  {
+    "id": 4,
+    "goal": "Implement recipe insert and list in the repository backed by SQLite.",
+    "done_when": "Tests for task 3 pass.",
+    "done_status": false
+  },
+  {
+    "id": 5,
+    "goal": "Add failing test: recipe survives closing the DB and opening a new connection to the same file path.",
+    "done_when": "Single unit test: temp file path; connection/store A migrates + creates one recipe + closes; connection/store B opens same path, List returns that recipe with same fields (persistence, not :memory: only).",
+    "done_status": false
+  },
+  {
+    "id": 6,
+    "goal": "Wire file-backed DB path (e.g. RECIPE_DB_PATH) and app lifecycle so handlers use the repository; default suitable for local and VM deploy.",
+    "done_when": "Tests for task 5 pass.",
+    "done_status": false
+  },
+  {
+    "id": 7,
+    "goal": "Add failing test: GET /recipe-bank HTML includes per-card edit and delete controls when at least one recipe exists in DB.",
+    "done_when": "Single test: seed DB with one recipe, GET /recipe-bank via mux returns 200 and body contains per recipe-card: a link to /recipe-bank/{id}/edit (id matching seeded row) and a POST form with action targeting delete for that id (e.g. POST /recipe-bank/{id}/delete) with a submit control (button or input type=submit).",
+    "done_status": false
+  },
+  {
+    "id": 8,
+    "goal": "Implement recipe card template updates: edit link and delete form/button; pass recipe id into list template data.",
+    "done_when": "Tests for task 7 pass.",
+    "done_status": false
+  },
+  {
+    "id": 9,
+    "goal": "Add failing test: POST delete removes recipe and it no longer appears on GET /recipe-bank.",
+    "done_when": "Single test: seed one recipe, POST delete route for that id (follow redirect if 303), GET /recipe-bank body does not contain that recipe name (or List count 0).",
+    "done_status": false
+  },
+  {
+    "id": 10,
+    "goal": "Implement POST handler to delete recipe by id; redirect to GET /recipe-bank; 404 for unknown id.",
+    "done_when": "Tests for task 9 pass.",
+    "done_status": false
+  },
+  {
+    "id": 11,
+    "goal": "Add failing test: GET /recipe-bank/{id}/edit returns HTML form fields pre-filled with that recipe.",
+    "done_when": "Single test: seed recipe with known name/link/ingredients, GET /recipe-bank/{id}/edit returns 200, text/html, body contains input/textarea values or value attributes matching seeded strings.",
+    "done_status": false
+  },
+  {
+    "id": 12,
+    "goal": "Implement GET /recipe-bank/{id}/edit page (template + load by id).",
+    "done_when": "Tests for task 11 pass.",
+    "done_status": false
+  },
+  {
+    "id": 13,
+    "goal": "Add failing test: POST save from edit form updates DB; subsequent GET reflects new values.",
+    "done_when": "Single test: seed recipe, POST update with changed name/link/ingredients (same form field names as test contract), then GET /recipe-bank or GET edit page shows updated strings, not originals.",
+    "done_status": false
+  },
+  {
+    "id": 14,
+    "goal": "Implement POST handler to update recipe by id; redirect after success; validate id exists.",
+    "done_when": "Tests for task 13 pass; go test ./... green for covered packages.",
+    "done_status": false
+  }
+]
