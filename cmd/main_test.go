@@ -309,3 +309,97 @@ func TestRecipeBankGETListsMultipleSeededRecipesAsCards(t *testing.T) {
 		t.Fatalf("GET /recipe-bank: want data-recipe-name=%q on a card; body=%q", nameB, body)
 	}
 }
+
+// TestRecipeBankPOSTDeleteRemovesRecipe (v2 id 9): after delete, the recipe must not appear on GET /recipe-bank.
+func TestRecipeBankPOSTDeleteRemovesRecipe(t *testing.T) {
+	ctx := context.Background()
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if err := recipes.Migrate(db); err != nil {
+		t.Fatalf("Migrate: %v", err)
+	}
+	store := recipes.NewStore(db)
+
+	const wantName = "To Be Deleted Soup"
+	id, err := store.Create(ctx, wantName, "https://example.com/del", "water\nsalt")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mux := newMux(store)
+	// Do not follow 303 from POST delete so we assert redirect headers, then GET explicitly.
+	clientNoFollow := &http.Client{
+		Transport: &muxRoundTripper{mux: mux},
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	client := &http.Client{
+		Transport:     &muxRoundTripper{mux: mux},
+		CheckRedirect: func(*http.Request, []*http.Request) error { return nil },
+	}
+
+	delURL := fmt.Sprintf("http://example.com/recipe-bank/%d/delete", id)
+	postReq, err := http.NewRequest(http.MethodPost, delURL, strings.NewReader(""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	postReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	postResp, err := clientNoFollow.Do(postReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = io.Copy(io.Discard, postResp.Body)
+	postResp.Body.Close()
+
+	if postResp.StatusCode != http.StatusSeeOther {
+		t.Fatalf("POST %s: want status %d, got %d", delURL, http.StatusSeeOther, postResp.StatusCode)
+	}
+	loc := postResp.Header.Get("Location")
+	if loc == "" {
+		t.Fatalf("POST %s: want Location header", delURL)
+	}
+	locURL, err := postReq.URL.Parse(loc)
+	if err != nil {
+		t.Fatalf("POST %s: bad Location %q: %v", delURL, loc, err)
+	}
+	if locURL.Path != "/recipe-bank" {
+		t.Fatalf("POST %s: want redirect to /recipe-bank, got %q", delURL, locURL.Path)
+	}
+
+	getReq, err := http.NewRequest(http.MethodGet, "http://example.com/recipe-bank", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	getResp, err := client.Do(getReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer getResp.Body.Close()
+	getBody, err := io.ReadAll(getResp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := string(getBody)
+
+	if getResp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /recipe-bank after delete: want status %d, got %d; body=%q", http.StatusOK, getResp.StatusCode, body)
+	}
+	if strings.Contains(body, wantName) {
+		t.Fatalf("GET /recipe-bank: body must not include deleted recipe name %q; got %q", wantName, body)
+	}
+}
+
+func TestRecipeBankPOSTDeleteUnknownIDReturns404(t *testing.T) {
+	t.Parallel()
+	req := httptest.NewRequest(http.MethodPost, "/recipe-bank/99999/delete", nil)
+	rec := httptest.NewRecorder()
+	newTestMux(t).ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("POST delete unknown id: want status %d, got %d", http.StatusNotFound, rec.Code)
+	}
+}

@@ -2,11 +2,13 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"html/template"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"recipe-rotation-2/internal/recipes"
 
@@ -49,6 +51,7 @@ func newMux(store *recipes.Store) http.Handler {
 	mux.HandleFunc("GET /{$}", srv.homeHandler)
 	mux.HandleFunc("GET /recipe-bank", srv.recipeBankGetHandler)
 	mux.HandleFunc("POST /recipe-bank", srv.recipeBankPostHandler)
+	mux.HandleFunc("POST /recipe-bank/{id}/delete", srv.recipeBankDeletePostHandler)
 	return mux
 }
 
@@ -94,6 +97,26 @@ func (s *server) recipeBankPostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Location", "/recipe-bank")
+	w.WriteHeader(http.StatusSeeOther)
+}
+
+func (s *server) recipeBankDeletePostHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil || id <= 0 {
+		http.NotFound(w, r)
+		return
+	}
+	if err := s.store.Delete(r.Context(), id); err != nil {
+		if errors.Is(err, recipes.ErrNotFound) {
+			http.NotFound(w, r)
+			return
+		}
+		log.Printf("recipe delete: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
 	w.Header().Set("Location", "/recipe-bank")
 	w.WriteHeader(http.StatusSeeOther)
 }

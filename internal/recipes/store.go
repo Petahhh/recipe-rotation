@@ -3,7 +3,11 @@ package recipes
 import (
 	"context"
 	"database/sql"
+	"errors"
 )
+
+// ErrNotFound is returned when no recipe matches the requested id.
+var ErrNotFound = errors.New("recipe not found")
 
 // Store reads and writes recipes in SQLite.
 type Store struct {
@@ -46,4 +50,20 @@ func (s *Store) List(ctx context.Context) ([]Recipe, error) {
 		out = append(out, r)
 	}
 	return out, rows.Err()
+}
+
+// Delete removes the recipe with the given id. ErrNotFound if no row was deleted.
+func (s *Store) Delete(ctx context.Context, id int64) error {
+	res, err := s.db.ExecContext(ctx, `DELETE FROM recipes WHERE id = ?`, id)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
 }

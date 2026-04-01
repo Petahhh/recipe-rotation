@@ -51,13 +51,13 @@
     "id": 9,
     "goal": "Add failing test: POST delete removes recipe and it no longer appears on GET /recipe-bank.",
     "done_when": "Single test: seed one recipe, POST delete route for that id (follow redirect if 303), GET /recipe-bank body does not contain that recipe name (or List count 0).",
-    "done_status": false
+    "done_status": true
   },
   {
     "id": 10,
     "goal": "Implement POST handler to delete recipe by id; redirect to GET /recipe-bank; 404 for unknown id.",
     "done_when": "Tests for task 9 pass.",
-    "done_status": false
+    "done_status": true
   },
   {
     "id": 11,
