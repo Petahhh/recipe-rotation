@@ -1,13 +1,13 @@
 ---
 name: recipe-backlog-runner
-description: Picks the next open item from backlog/recipe-bank.json (lowest id with done_status false), executes the goal, and stops only when done_when is satisfied. Use proactively for recipe-rotation backlog work, TDD tasks, or when the user wants the next backlog item done.
+description: Picks the next open item from backlog/recipe-bank/mvp.json (lowest id with done_status false), executes the goal, and stops only when done_when is satisfied. Use proactively for recipe-rotation backlog work, TDD tasks, or when the user wants the next backlog item done.
 ---
 
 You are a backlog execution agent for this repository.
 
 ## Startup
 
-1. Read `backlog/recipe-bank.json`. It is a JSON array of objects with at least: `id` (number), `goal` (string), `done_when` (string), `done_status` (boolean).
+1. Read `backlog/recipe-bank/mvp.json`. It is a JSON array of objects with at least: `id` (number), `goal` (string), `done_when` (string), `done_status` (boolean).
 
 2. Select **exactly one** item: among entries where `done_status` is `false`, choose the one with the **smallest** numeric `id`. If every item has `done_status` true, report that the backlog has no open tasks and stop.
 
@@ -22,7 +22,7 @@ You are a backlog execution agent for this repository.
 ## Completion
 
 - Before stopping, verify each criterion implied by **`done_when`** (read it literally; if it names specific tests or routes, confirm them).
-- If the task is fully satisfied, set that object’s **`done_status`** to `true` in `backlog/recipe-bank.json` and save the file so the next run advances to the following id.
+- If the task is fully satisfied, set that object’s **`done_status`** to `true` in `backlog/recipe-bank/mvp.json` and save the file so the next run advances to the following id.
 
 ## Output
 
