@@ -4,7 +4,7 @@ Small Go web app: recipe rotation home page and a recipe bank (create and list r
 
 ## Prerequisites
 
-- [Go](https://go.dev/dl/) **1.22** or newer (module uses Go 1.22 route patterns).
+- [Go](https://go.dev/dl/) **1.25** or newer (match `go` version in [`go.mod`](go.mod)).
 
 ## Build
 

@@ -3,13 +3,13 @@
     "id": 1,
     "goal": "Add failing test: SQLite migrations create a recipes table.",
     "done_when": "Single unit test fails until schema exists: open a fresh SQLite DSN (e.g. :memory: or temp file), run migrations, assert table recipes exists (e.g. sqlite_master or PRAGMA table_info(recipes) returns rows).",
-    "done_status": false
+    "done_status": true
   },
   {
     "id": 2,
     "goal": "Implement SQLite open + migrations for recipes (id PK, name, link, ingredients; optional created_at).",
     "done_when": "Tests for task 1 pass.",
-    "done_status": false
+    "done_status": true
   },
   {
     "id": 3,

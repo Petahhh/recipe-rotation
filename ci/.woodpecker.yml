@@ -35,7 +35,7 @@ steps:
       - gcloud compute ssh ubuntu@recipe-rotation --zone us-central1-b --command "sudo apt-get update && sudo apt-get install -y nginx && sudo systemctl enable --now nginx && sudo systemctl is-active nginx"
 
   deploy-app:
-    image: golang:1.22
+    image: golang:1.25
     depends_on:
       - deploy-nginx
     environment:
@@ -68,7 +68,7 @@ steps:
       - gcloud compute ssh ubuntu@recipe-rotation --zone us-central1-b --command "sudo bash /tmp/remote-setup.sh"
 
   run-e2e-test:
-    image: golang:1.22
+    image: golang:1.25
     depends_on:
       - deploy-app
     commands:
